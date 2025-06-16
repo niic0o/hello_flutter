@@ -27,8 +27,14 @@ class MyApp extends StatelessWidget {
 
 class MyAppState extends ChangeNotifier {
   var current = WordPair.random();
+  Color textColor = Colors.indigoAccent;
+  Color bgColor = Colors.deepOrange.shade100;
+
+
     void getNext() {
-    current = WordPair.random();
+    current = WordPair.random(); 
+    textColor = Colors.primaries[current.first.length % Colors.primaries.length];
+    bgColor = Colors.accents[current.second.length % Colors.accents.length];
     notifyListeners();
   }
 }
@@ -37,6 +43,7 @@ class MyHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
+    var pair = appState.current;
 
     return Scaffold(
       body: Center(
@@ -46,9 +53,9 @@ class MyHomePage extends StatelessWidget {
             Text('Hola soy un texto centrado',
                 style: TextStyle(
                     fontSize: 30,
-                    color: Colors.indigoAccent,
-                    backgroundColor: Colors.deepOrange.shade100)),
-            Text(appState.current.asLowerCase), //objeto2
+                    color: appState.textColor,
+                    backgroundColor: appState.bgColor)),
+            BigCard(pair: pair), //objeto2
             ElevatedButton(
               //objeto3
               onPressed: () {
@@ -60,5 +67,19 @@ class MyHomePage extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class BigCard extends StatelessWidget {
+  const BigCard({
+    super.key,
+    required this.pair,
+  });
+
+  final WordPair pair;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(pair.asLowerCase);
   }
 }
