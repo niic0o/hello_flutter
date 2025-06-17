@@ -1,6 +1,7 @@
 import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:math';
 
 void main() {
   runApp(MyApp());
@@ -30,11 +31,26 @@ class MyAppState extends ChangeNotifier {
   Color textColor = Colors.indigoAccent;
   Color bgColor = Colors.deepOrange.shade100;
 
+  void getNext() {
+    
+    current = WordPair.random();
 
-    void getNext() {
-    current = WordPair.random(); 
-    textColor = Colors.primaries[current.first.length % Colors.primaries.length];
-    bgColor = Colors.accents[current.second.length % Colors.accents.length];
+    final random = Random();
+    
+    textColor = Color.fromARGB(
+      255, // opacidad máxima
+      random.nextInt(256),
+      random.nextInt(256),
+      random.nextInt(256),
+    );
+    
+    bgColor = Color.fromARGB(
+      255,
+      random.nextInt(256),
+      random.nextInt(256),
+      random.nextInt(256),
+    );
+    
     notifyListeners();
   }
 }
@@ -78,8 +94,17 @@ class BigCard extends StatelessWidget {
 
   final WordPair pair;
 
-  @override
-  Widget build(BuildContext context) {
-    return Text(pair.asLowerCase);
-  }
+@override
+Widget build(BuildContext context) {
+
+  final theme = Theme.of(context);
+
+  return Card(
+    color: theme.colorScheme.primary,
+    child: Padding(
+      padding: const EdgeInsets.all(15.0),
+      child: Text(pair.asLowerCase),
+    )
+  );
+}
 }
