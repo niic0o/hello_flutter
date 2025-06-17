@@ -39,14 +39,14 @@ class MyAppState extends ChangeNotifier {
     final random = Random();
 
 // Generás un color aleatorio para el texto
-int r = random.nextInt(256);
-int g = random.nextInt(256);
-int b = random.nextInt(256);
+    int r = random.nextInt(256);
+    int g = random.nextInt(256);
+    int b = random.nextInt(256);
 
-textColor = Color.fromARGB(255, r, g, b);
+    textColor = Color.fromARGB(255, r, g, b);
 
 // Calculás el color inverso para el fondo
-bgColor = Color.fromARGB(255, 255 - r, 255 - g, 255 - b);
+    bgColor = Color.fromARGB(255, 255 - r, 255 - g, 255 - b);
 
     notifyListeners(); //notifica a los widgets que hubo un cambio y toca hacer build de nuevo
   }
@@ -66,9 +66,28 @@ bgColor = Color.fromARGB(255, 255 - r, 255 - g, 255 - b);
 
 // ...
 
-class MyHomePage extends StatelessWidget {
+class MyHomePage extends StatefulWidget {
+  @override
+  State<MyHomePage> createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  var selectedIndex = 0;
+
   @override
   Widget build(BuildContext context) {
+    Widget page;
+    switch (selectedIndex) {
+      case 0:
+        page = GeneratorPage();
+        break;
+      case 1:
+        page = Placeholder();
+        break;
+      default:
+        throw UnimplementedError('no widget for $selectedIndex'); //evita errores por falta de implementacion de case
+    }
+
     return Scaffold(
       body: Row(
         children: [
@@ -85,16 +104,21 @@ class MyHomePage extends StatelessWidget {
                   label: Text('Favorites'),
                 ),
               ],
-              selectedIndex: 0,
+              selectedIndex: selectedIndex,
               onDestinationSelected: (value) {
-                print('selected: $value');
+                //"item seleccionado con el mouse: (indice del widget seleccionado) "
+                setState(() {
+                  //setState es metodo de state y recibe una funcion callback "()"
+                  selectedIndex =
+                      value; // actualiza una variable global y retorna la ejecucion.
+                });
               },
             ),
           ),
           Expanded(
             child: Container(
               color: Theme.of(context).colorScheme.primaryContainer,
-              child: GeneratorPage(),
+              child: page, //dependiendo el selectedIndex es la pagina que se va a rebuild
             ),
           ),
         ],
