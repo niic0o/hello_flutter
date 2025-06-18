@@ -5,26 +5,38 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:hello_flutter/main.dart';
+import 'package:flutter_localization/flutter_localization.dart';
+import 'package:hello_flutter/app_locale.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('Smoke test: app builds and shows Home label', (WidgetTester tester) async {
+    // Inicializa bindings para test
+    TestWidgetsFlutterBinding.ensureInitialized();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Configura la localización como en main.dart
+    final FlutterLocalization testLocalization = FlutterLocalization.instance;
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    await testLocalization.ensureInitialized();
+    testLocalization.init(
+      mapLocales: [
+        const MapLocale('en', AppLocale.en),
+        const MapLocale('es', AppLocale.es),
+      ],
+      initLanguageCode: 'es',
+    );
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Monta la app
+    await tester.pumpWidget(MyApp(localization: testLocalization));
+
+    // Verifica que se muestre el texto 'Home' (por defecto está en inglés)
+    expect(find.text('Home'), findsOneWidget);
+
+    // Podés cambiar el idioma y volver a verificar si querés
+    testLocalization.translate('es');
+    await tester.pumpAndSettle(); // Esperá a que la UI se actualice
+
+    expect(find.text('Inicio'), findsOneWidget);
   });
 }

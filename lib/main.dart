@@ -2,16 +2,32 @@ import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:math';
+import 'package:flutter_localization/flutter_localization.dart';
+import 'app_locale.dart';
 
-void main() {
-  runApp(MyApp());
+final FlutterLocalization localization = FlutterLocalization.instance;
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await FlutterLocalization.instance.ensureInitialized();
+
+  // Inicializás la traducción ANTES de correr la app
+  localization.init(
+    mapLocales: [
+      const MapLocale('en', AppLocale.en),
+      const MapLocale('es', AppLocale.es),
+    ],
+    initLanguageCode: 'es',
+  );
+
+  runApp(MyApp(localization: localization));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
+  final FlutterLocalization localization;
+  const MyApp({super.key, required this.localization});
   @override
   Widget build(BuildContext context) {
+    //notificador de cambios para el arbol de widgets
     return ChangeNotifierProvider(
       create: (context) => MyAppState(),
       child: MaterialApp(
@@ -21,6 +37,8 @@ class MyApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(
               seedColor: const Color.fromARGB(255, 103, 174, 181)),
         ),
+        supportedLocales: localization.supportedLocales,
+        localizationsDelegates: localization.localizationsDelegates,
         home: MyHomePage(),
       ),
     );
@@ -85,49 +103,50 @@ class _MyHomePageState extends State<MyHomePage> {
         page = FavoritePage();
         break;
       default:
-        throw UnimplementedError('no widget for $selectedIndex'); //evita errores por falta de implementacion de case
+        throw UnimplementedError(
+            'no widget for $selectedIndex'); //evita errores por falta de implementacion de case
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) { //construye el layout segun las dimensiones de la pantalla indicadas en constraints
-        return Scaffold(
-          body: Row(
-            children: [
-              SafeArea(
-                child: NavigationRail(
-                  extended: constraints.maxWidth >= 600, 
-                  destinations: [
-                    NavigationRailDestination(
-                      icon: Icon(Icons.home),
-                      label: Text('Home'),
-                    ),
-                    NavigationRailDestination(
-                      icon: Icon(Icons.favorite),
-                      label: Text('Favorites'),
-                    ),
-                  ],
-                  selectedIndex: selectedIndex,
-                  onDestinationSelected: (value) {
-                    //"item seleccionado con el mouse: (indice del widget seleccionado) "
-                    setState(() {
-                      //setState es metodo de state y recibe una funcion callback "()"
-                      selectedIndex =
-                          value; // actualiza una variable global y retorna la ejecucion.
-                    });
-                  },
-                ),
+    return LayoutBuilder(builder: (context, constraints) {
+      //construye el layout segun las dimensiones de la pantalla indicadas en constraints
+      return Scaffold(
+        body: Row(
+          children: [
+            SafeArea(
+              child: NavigationRail(
+                extended: constraints.maxWidth >= 600,
+                destinations: [
+                  NavigationRailDestination(
+                    icon: Icon(Icons.home),
+                    label: Text(AppLocale.home.getString(context)),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.favorite),
+                    label: Text(AppLocale.favorites.getString(context)),
+                  ),
+                ],
+                selectedIndex: selectedIndex,
+                onDestinationSelected: (value) {
+                  //"item seleccionado con el mouse: (indice del widget seleccionado) "
+                  setState(() {
+                    //setState es metodo de state y recibe una funcion callback "()"
+                    selectedIndex =
+                        value; // actualiza una variable global y retorna la ejecucion.
+                  });
+                },
               ),
-              Expanded(
-                child: Container(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  child: page, //dependiendo el selectedIndex es la pagina que se va a rebuild
-                ),
+            ),
+            Expanded(
+              child: Container(
+                color: Theme.of(context).colorScheme.primaryContainer,
+                child:
+                    page, //dependiendo el selectedIndex es la pagina que se va a rebuild
               ),
-            ],
-          ),
-        );
-      }
-    );
+            ),
+          ],
+        ),
+      );
+    });
   }
 }
 
@@ -152,7 +171,7 @@ class GeneratorPage extends StatelessWidget {
             color: appState.bgColor, // Fondo más amplio
             padding: EdgeInsets.symmetric(vertical: 20, horizontal: 40),
             child: Text(
-              ' Añade tu palabra favorita ',
+              AppLocale.addFavorite.getString(context),
               style: TextStyle(
                 fontSize: 30,
                 color: appState.textColor,
@@ -169,14 +188,14 @@ class GeneratorPage extends StatelessWidget {
                   appState.toggleFavorite();
                 },
                 icon: Icon(icon),
-                label: Text('Like'),
+                label: Text(AppLocale.like.getString(context)),
               ),
               SizedBox(width: 10),
               ElevatedButton(
                 onPressed: () {
                   appState.getNext();
                 },
-                child: Text('Next'),
+                child: Text(AppLocale.next.getString(context)),
               ),
             ],
           ),
@@ -187,30 +206,31 @@ class GeneratorPage extends StatelessWidget {
 }
 
 class FavoritePage extends StatelessWidget {
-
   @override
   Widget build(BuildContext context) {
-  var appState = context.watch<MyAppState>();
-  if (appState.favorites.isEmpty) {
-    return Center(child: Text('Todavía no hay favoritos.'));
-  }
-
-  return ListView(
-    padding: EdgeInsets.all(16),
-    children: appState.favorites.map((pair) {
-      return Card(
-        color: Colors.amber.shade100,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Text(
-            pair.asPascalCase,
-            style: TextStyle(fontSize: 20),
-          ),
-        ),
+    var appState = context.watch<MyAppState>();
+    if (appState.favorites.isEmpty) {
+      return Center(
+        child: Text(AppLocale.noFavorites.getString(context)),
       );
-    }).toList(),
-  );
-}
+    }
+
+    return ListView(
+      padding: EdgeInsets.all(16),
+      children: appState.favorites.map((pair) {
+        return Card(
+          color: Colors.amber.shade100,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text(
+              pair.asPascalCase,
+              style: TextStyle(fontSize: 20),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
 }
 
 class BigCard extends StatelessWidget {
