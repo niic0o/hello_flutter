@@ -16,7 +16,7 @@ Future<void> main() async {
       const MapLocale('en', AppLocale.en),
       const MapLocale('es', AppLocale.es),
     ],
-    initLanguageCode: 'es',
+    initLanguageCode: 'en',
   );
 
   runApp(MyApp(localization: localization));
@@ -102,6 +102,9 @@ class _MyHomePageState extends State<MyHomePage> {
       case 1:
         page = FavoritePage();
         break;
+      case 2:
+        page = LanguagePage();
+        break;
       default:
         throw UnimplementedError(
             'no widget for $selectedIndex'); //evita errores por falta de implementacion de case
@@ -123,6 +126,10 @@ class _MyHomePageState extends State<MyHomePage> {
                   NavigationRailDestination(
                     icon: Icon(Icons.favorite),
                     label: Text(AppLocale.favorites.getString(context)),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.language),
+                    label: Text(AppLocale.changeLanguage.getString(context)),
                   ),
                 ],
                 selectedIndex: selectedIndex,
@@ -260,5 +267,36 @@ class BigCard extends StatelessWidget {
                 "${pair.first} ${pair.second}", //permite a lectores de pantalla leer mejor las palabras
           ),
         ));
+  }
+}
+
+//permite switchear entre idiomas
+class LanguageToggleButton extends StatelessWidget {
+  const LanguageToggleButton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final localization = FlutterLocalization.instance;
+    final currentLang = localization.currentLocale.localeIdentifier;
+    final nextLang = currentLang == 'en' ? 'es' : 'en';
+
+    return ElevatedButton(
+      onPressed: () {
+        localization.translate(nextLang);
+      },
+      child: Text(
+        localization.getLanguageName(languageCode: nextLang),
+      ),
+    );
+  }
+}
+
+// crea un widget centrado que tiene como hijo al boton que switchea idiomas
+class LanguagePage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: LanguageToggleButton(),
+    );
   }
 }
