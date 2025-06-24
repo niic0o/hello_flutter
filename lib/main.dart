@@ -4,13 +4,18 @@ import 'package:provider/provider.dart';
 import 'dart:math';
 import 'package:flutter_localization/flutter_localization.dart';
 import 'app_locale.dart';
+import 'local_provider.dart';
+
+// --- CONFIGURACIÓN DE LOCALIZACIÓN E INICIO DE LA APP ---
 
 final FlutterLocalization localization = FlutterLocalization.instance;
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await FlutterLocalization.instance.ensureInitialized();
+  // ** LÍNEA CORREGIDA: Faltaba esta inicialización para el paquete de localización **
+  await localization.ensureInitialized();
 
-  // Inicializás la traducción ANTES de correr la app
+  // Inicializa la traducción ANTES de correr la app
   localization.init(
     mapLocales: [
       const MapLocale('en', AppLocale.en),
@@ -19,59 +24,70 @@ Future<void> main() async {
     initLanguageCode: 'en',
   );
 
-  runApp(MyApp(localization: localization));
+    runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => MyAppState()),
+        ChangeNotifierProvider(create: (_) => LocaleNotifier()),
+      ],
+      child: MyApp(localization: localization),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
   final FlutterLocalization localization;
   const MyApp({super.key, required this.localization});
+
   @override
   Widget build(BuildContext context) {
-    //notificador de cambios para el arbol de widgets
-    return ChangeNotifierProvider(
-      create: (context) => MyAppState(),
-      child: MaterialApp(
-        title: 'Hello Flutter',
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color.fromARGB(255, 103, 174, 181)),
+    final locale = context.watch<LocaleNotifier>().locale;
+    localization.translate(locale.languageCode); // ⚙️ actualiza strings
+
+    return MaterialApp(
+      locale: locale,
+      supportedLocales: localization.supportedLocales,
+      localizationsDelegates: localization.localizationsDelegates,
+      title: 'Hello Flutter',
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color.fromARGB(255, 103, 174, 181),
         ),
-        supportedLocales: localization.supportedLocales,
-        localizationsDelegates: localization.localizationsDelegates,
-        home: MyHomePage(),
       ),
+      home: MyHomePage(),
     );
   }
 }
 
+// --- ESTADO GLOBAL DE LA APLICACIÓN ---
+
 class MyAppState extends ChangeNotifier {
   var current = WordPair.random();
-
   Color textColor = Colors.indigoAccent;
   Color bgColor = Colors.deepOrange.shade100;
 
+  // Genera una nueva palabra y colores aleatorios
   void getNext() {
     current = WordPair.random();
 
     final random = Random();
-
-// Generás un color aleatorio para el texto
+    // Genera un color aleatorio para el texto
     int r = random.nextInt(256);
     int g = random.nextInt(256);
     int b = random.nextInt(256);
-
     textColor = Color.fromARGB(255, r, g, b);
 
-// Calculás el color inverso para el fondo
+    // Calcula el color inverso para el fondo
     bgColor = Color.fromARGB(255, 255 - r, 255 - g, 255 - b);
 
-    notifyListeners(); //notifica a los widgets que hubo un cambio y toca hacer build de nuevo
+    notifyListeners(); // Notifica a los widgets que hubo un cambio
   }
 
-  //guardo una lista de palabras favoritas
+  // Lista para guardar palabras favoritas
   var favorites = <WordPair>[];
 
+  // Agrega o quita la palabra actual de favoritos
   void toggleFavorite() {
     if (favorites.contains(current)) {
       favorites.remove(current);
@@ -82,7 +98,7 @@ class MyAppState extends ChangeNotifier {
   }
 }
 
-// ...
+// --- PÁGINA PRINCIPAL CON NAVEGACIÓN ---
 
 class MyHomePage extends StatefulWidget {
   @override
@@ -102,16 +118,12 @@ class _MyHomePageState extends State<MyHomePage> {
       case 1:
         page = FavoritePage();
         break;
-      case 2:
-        page = LanguagePage();
-        break;
       default:
-        throw UnimplementedError(
-            'no widget for $selectedIndex'); //evita errores por falta de implementacion de case
+        // Este caso ya no debería ocurrir para la navegación, pero es una buena práctica tenerlo.
+        throw UnimplementedError('no widget for $selectedIndex');
     }
 
     return LayoutBuilder(builder: (context, constraints) {
-      //construye el layout segun las dimensiones de la pantalla indicadas en constraints
       return Scaffold(
         body: Row(
           children: [
@@ -134,20 +146,24 @@ class _MyHomePageState extends State<MyHomePage> {
                 ],
                 selectedIndex: selectedIndex,
                 onDestinationSelected: (value) {
-                  //"item seleccionado con el mouse: (indice del widget seleccionado) "
-                  setState(() {
-                    //setState es metodo de state y recibe una funcion callback "()"
-                    selectedIndex =
-                        value; // actualiza una variable global y retorna la ejecucion.
-                  });
+                  // ** LÓGICA CORREGIDA PARA ACTUALIZACIÓN EN TIEMPO REAL **
+                  if (value == 2) {
+                    // Si se presiona el índice 2 (Idioma), cambiamos el idioma
+                    // y llamamos a setState para reconstruir la UI inmediatamente.
+                    context.read<LocaleNotifier>().toggleLocale(); 
+                  } else {
+                    // Para los otros índices (0 y 1), navegamos como antes.
+                    setState(() {
+                      selectedIndex = value;
+                    });
+                  }
                 },
               ),
             ),
             Expanded(
               child: Container(
                 color: Theme.of(context).colorScheme.primaryContainer,
-                child:
-                    page, //dependiendo el selectedIndex es la pagina que se va a rebuild
+                child: page,
               ),
             ),
           ],
@@ -156,6 +172,8 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 }
+
+// --- PÁGINAS DE LA APLICACIÓN ---
 
 class GeneratorPage extends StatelessWidget {
   @override
@@ -175,7 +193,7 @@ class GeneratorPage extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            color: appState.bgColor, // Fondo más amplio
+            color: appState.bgColor,
             padding: EdgeInsets.symmetric(vertical: 20, horizontal: 40),
             child: Text(
               AppLocale.addFavorite.getString(context),
@@ -240,6 +258,8 @@ class FavoritePage extends StatelessWidget {
   }
 }
 
+// --- WIDGETS PERSONALIZADOS ---
+
 class BigCard extends StatelessWidget {
   const BigCard({
     super.key,
@@ -257,46 +277,14 @@ class BigCard extends StatelessWidget {
 
     return Card(
         color: theme.colorScheme.primary,
-        elevation: 19.0, //sombreado
+        elevation: 19.0, // sombreado
         child: Padding(
           padding: const EdgeInsets.all(15.0),
           child: Text(
             pair.asLowerCase,
-            style: style, //estilo de letras heredadas del tema
-            semanticsLabel:
-                "${pair.first} ${pair.second}", //permite a lectores de pantalla leer mejor las palabras
+            style: style, // estilo de letras heredadas del tema
+            semanticsLabel: "${pair.first} ${pair.second}",
           ),
         ));
-  }
-}
-
-//permite switchear entre idiomas
-class LanguageToggleButton extends StatelessWidget {
-  const LanguageToggleButton({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final localization = FlutterLocalization.instance;
-    final currentLang = localization.currentLocale.localeIdentifier;
-    final nextLang = currentLang == 'en' ? 'es' : 'en';
-
-    return ElevatedButton(
-      onPressed: () {
-        localization.translate(nextLang);
-      },
-      child: Text(
-        localization.getLanguageName(languageCode: nextLang),
-      ),
-    );
-  }
-}
-
-// crea un widget centrado que tiene como hijo al boton que switchea idiomas
-class LanguagePage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: LanguageToggleButton(),
-    );
   }
 }
